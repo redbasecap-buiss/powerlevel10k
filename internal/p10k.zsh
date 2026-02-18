@@ -2178,6 +2178,26 @@ _p9k_prompt_docker_machine_init() {
 }
 
 ################################################################
+# Docker context
+# Shows the active Docker context when it differs from "default".
+# Reads from $DOCKER_CONTEXT env var or ~/.docker/config.json.
+prompt_docker_context() {
+  local ctx="${DOCKER_CONTEXT:-}"
+  if [[ -z $ctx && -r ~/.docker/config.json ]]; then
+    # Fast extraction without jq dependency — handles simple JSON layout
+    if [[ "$(< ~/.docker/config.json)" == (#b)*'"currentContext"'[[:space:]]#:[[:space:]]#'"'([^\"']##)'"'* ]]; then
+      ctx=$match[1]
+    fi
+  fi
+  [[ -n $ctx && $ctx != default ]] || return
+  _p9k_prompt_segment "$0" "blue" "$_p9k_color1" 'SERVER_ICON' 0 '' "${ctx//\%/%%}"
+}
+
+_p9k_prompt_docker_context_init() {
+  typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='$commands[docker]'
+}
+
+################################################################
 # GO prompt
 prompt_go_version() {
   _p9k_cached_cmd 0 '' go version || return

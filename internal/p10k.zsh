@@ -2788,6 +2788,82 @@ _p9k_prompt_ram_sync() {
   _p9k_worker_reply $REPLY
 }
 
+################################################################
+# Segment to display CPU usage percentage (issue #10)
+prompt_cpu_usage() {
+  local -i len=$#_p9k__prompt _p9k__has_upglob
+  _p9k_prompt_segment $0_HIGH    red    "$_p9k_color1" CPU_ICON 1 '$_p9k__cpu_usage_high'    '$_p9k__cpu_usage_pct%%'
+  _p9k_prompt_segment $0_MEDIUM  yellow "$_p9k_color1" CPU_ICON 1 '$_p9k__cpu_usage_medium'  '$_p9k__cpu_usage_pct%%'
+  _p9k_prompt_segment $0_LOW     green  "$_p9k_color1" CPU_ICON 1 '$_p9k__cpu_usage_low'     '$_p9k__cpu_usage_pct%%'
+  (( _p9k__has_upglob )) || typeset -g "_p9k__segment_val_${_p9k__prompt_side}[_p9k__segment_index]"=$_p9k__prompt[len+1,-1]
+}
+
+_p9k_prompt_cpu_usage_init() {
+  typeset -g _p9k__cpu_usage_pct=
+  typeset -g _p9k__cpu_usage_low=
+  typeset -g _p9k__cpu_usage_medium=
+  typeset -g _p9k__cpu_usage_high=
+  _p9k__async_segments_compute+='_p9k_worker_invoke cpu_usage _p9k_prompt_cpu_usage_compute'
+}
+
+_p9k_prompt_cpu_usage_compute() {
+  _p9k_worker_async _p9k_prompt_cpu_usage_async _p9k_prompt_cpu_usage_sync
+}
+
+_p9k_prompt_cpu_usage_async() {
+  local -i pct
+  case $_p9k_os in
+    OSX|BSD)
+      (( $+commands[top] )) || return
+      local out && out="$(top -l 1 -n 0 2>/dev/null | grep -F 'CPU usage')" || return
+      local idle=${${out##*idle}%%\%*}
+      idle=${idle##* }
+      (( pct = 100 - ${idle%.*} ))
+    ;;
+    *)
+      [[ -r /proc/stat ]] || return
+      local -a curr
+      curr=(${(s: :)$(head -1 /proc/stat 2>/dev/null)})
+      shift curr  # remove "cpu" label
+      if (( $+_p9k__cpu_prev_total )); then
+        local -i total=0 idle_diff total_diff
+        for i in $curr; do (( total += i )); done
+        (( total_diff = total - _p9k__cpu_prev_total ))
+        (( idle_diff = curr[4] - _p9k__cpu_prev_idle ))
+        (( total_diff > 0 )) && (( pct = 100 * (total_diff - idle_diff) / total_diff ))
+      fi
+      local -i total=0
+      for i in $curr; do (( total += i )); done
+      typeset -gi _p9k__cpu_prev_total=$total
+      typeset -gi _p9k__cpu_prev_idle=${curr[4]}
+    ;;
+  esac
+
+  [[ $pct == $_p9k__cpu_usage_pct ]] && return
+
+  _p9k__cpu_usage_pct=$pct
+  _p9k__cpu_usage_low=
+  _p9k__cpu_usage_medium=
+  _p9k__cpu_usage_high=
+  if (( pct >= ${_POWERLEVEL9K_CPU_USAGE_HIGH_PCT:-80} )); then
+    _p9k__cpu_usage_high=1
+  elif (( pct >= ${_POWERLEVEL9K_CPU_USAGE_MEDIUM_PCT:-50} )); then
+    _p9k__cpu_usage_medium=1
+  else
+    _p9k__cpu_usage_low=1
+  fi
+  _p9k_print_params       \
+    _p9k__cpu_usage_pct    \
+    _p9k__cpu_usage_low    \
+    _p9k__cpu_usage_medium \
+    _p9k__cpu_usage_high
+}
+
+_p9k_prompt_cpu_usage_sync() {
+  eval $REPLY
+  _p9k_worker_reply $REPLY
+}
+
 function _p9k_rbenv_global_version() {
   _p9k_read_word ${RBENV_ROOT:-$HOME/.rbenv}/version || _p9k__ret=system
 }

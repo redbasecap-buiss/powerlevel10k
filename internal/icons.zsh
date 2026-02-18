@@ -84,6 +84,7 @@ function _p9k_init_icons() {
         NETWORK_ICON                   '\uE1AD'$s             # 
         ETC_ICON                       '\uE82F'$s             # 
         LOAD_ICON                      '\uE190 '              # 
+        CPU_ICON                       '\uE266 '              # cpu
         SWAP_ICON                      '\uE87D'$s             # 
         RAM_ICON                       '\uE1E2 '              # 
         SERVER_ICON                    '\uE895'$s             # 

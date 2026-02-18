@@ -1708,6 +1708,15 @@
   #               typed after changing current working directory.
   typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=off
 
+  # Show timestamp in transient prompt (issue #9).
+  # typeset -g POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_TIME=1
+
+  # Show exit status in transient prompt (issue #9).
+  # typeset -g POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_STATUS=1
+
+  # Show error code only once — suppress on subsequent prompts (issue #11).
+  # typeset -g POWERLEVEL9K_STATUS_ERROR_SHOW_ONCE=1
+
   # Instant prompt mode.
   #
   #   - off:     Disable instant prompt. Choose this if you've tried instant prompt and found

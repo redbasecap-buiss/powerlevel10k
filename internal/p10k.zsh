@@ -3299,6 +3299,15 @@ instant_prompt_ssh() {
 # Status: When an error occur, return the error code, or a cross icon if option is set
 # Display an ok icon when no error occur, or hide the segment if option is set to false
 prompt_status() {
+  # Issue #11: Show error code only once - suppress if same status was already shown
+  if (( _POWERLEVEL9K_STATUS_ERROR_SHOW_ONCE && _p9k__status )); then
+    if [[ $_p9k__status == ${_p9k__last_shown_status:-} ]]; then
+      return
+    fi
+    _p9k__last_shown_status=$_p9k__status
+  elif (( _POWERLEVEL9K_STATUS_ERROR_SHOW_ONCE )); then
+    _p9k__last_shown_status=
+  fi
   if ! _p9k_cache_get $0 $_p9k__status $_p9k__pipestatus; then
     (( _p9k__status )) && local state=ERROR || local state=OK
     if (( _POWERLEVEL9K_STATUS_EXTENDED_STATES )); then
@@ -7449,6 +7458,13 @@ _p9k_init_params() {
   _p9k_declare -s POWERLEVEL9K_TRANSIENT_PROMPT off
   [[ $_POWERLEVEL9K_TRANSIENT_PROMPT == (off|always|same-dir) ]] || _POWERLEVEL9K_TRANSIENT_PROMPT=off
 
+  # Enhanced transient prompt options (issue #9)
+  _p9k_declare -b POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_TIME 0
+  _p9k_declare -b POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_STATUS 0
+
+  # Show error code only once (issue #11)
+  _p9k_declare -b POWERLEVEL9K_STATUS_ERROR_SHOW_ONCE 0
+
   _p9k_declare -b POWERLEVEL9K_TERM_SHELL_INTEGRATION 0
   if [[ __p9k_force_term_shell_integration -eq 1 || $ITERM_SHELL_INTEGRATION_INSTALLED == Yes ]]; then
     _POWERLEVEL9K_TERM_SHELL_INTEGRATION=1
@@ -8615,7 +8631,19 @@ function _p9k_init_cacheable() {
 
   if [[ $_POWERLEVEL9K_TRANSIENT_PROMPT != off ]]; then
     local sep=$'\1'
-    _p9k_transient_prompt='%b%k%s%u%(?'$sep
+    _p9k_transient_prompt='%b%k%s%u'
+
+    # Enhanced transient prompt: show time prefix (issue #9)
+    if (( _POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_TIME )); then
+      _p9k_transient_prompt+='%F{244}%D{%H:%M:%S}%f '
+    fi
+
+    # Enhanced transient prompt: show exit status (issue #9)
+    if (( _POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_STATUS )); then
+      _p9k_transient_prompt+='%(?..'$sep'%F{196}✘ %?%f '$sep')'
+    fi
+
+    _p9k_transient_prompt+='%(?'$sep
     _p9k_color prompt_prompt_char_OK_VIINS FOREGROUND 76
     _p9k_foreground $_p9k__ret
     _p9k_transient_prompt+=$_p9k__ret

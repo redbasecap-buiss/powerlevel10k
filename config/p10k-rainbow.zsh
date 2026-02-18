@@ -1812,6 +1812,10 @@
   # Show error code only once — suppress on subsequent prompts (issue #11).
   # typeset -g POWERLEVEL9K_STATUS_ERROR_SHOW_ONCE=1
 
+  # Remove trailing space after prompt for easier copy-paste (issue #12).
+  # Set to empty string to remove the space before the cursor.
+  # typeset -g POWERLEVEL9K_LEFT_SEGMENT_END_SEPARATOR=''
+
   # Instant prompt mode.
   #
   #   - off:     Disable instant prompt. Choose this if you've tried instant prompt and found

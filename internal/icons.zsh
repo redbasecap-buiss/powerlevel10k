@@ -1130,7 +1130,10 @@ function _p9k_init_icons() {
 
   if [[ $POWERLEVEL9K_ICON_PADDING == none && $POWERLEVEL9K_MODE != ascii ]]; then
     icons=("${(@kv)icons%% #}")
-    icons[LEFT_SEGMENT_END_SEPARATOR]+=' '
+    # Issue #12: Respect explicit empty LEFT_SEGMENT_END_SEPARATOR for copy-friendly prompts
+    if [[ ${POWERLEVEL9K_LEFT_SEGMENT_END_SEPARATOR+set} != set ]]; then
+      icons[LEFT_SEGMENT_END_SEPARATOR]+=' '
+    fi
     icons[MULTILINE_LAST_PROMPT_PREFIX]+=' '
     icons[VCS_TAG_ICON]+=' '
     icons[VCS_BOOKMARK_ICON]+=' '

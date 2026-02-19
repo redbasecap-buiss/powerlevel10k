@@ -6980,9 +6980,17 @@ function _p9k_on_expand() {
 
   eval "$__p9k_intro_no_locale"
 
-  if [[ $langinfo[CODESET] != (utf|UTF)(-|)8 ]]; then
+  # Use case statement instead of [[ ]] with alternation patterns to avoid
+  # "bad pattern" errors when extended_glob is off (e.g. during tab completion).
+  # See issue #2887.
+  local _p9k__codeset_is_utf8=0
+  case "${langinfo[CODESET]}" in
+    utf-8|UTF-8|utf8|UTF8) _p9k__codeset_is_utf8=1;;
+  esac
+
+  if (( ! _p9k__codeset_is_utf8 )); then
     _p9k_restore_special_params
-    if [[ $langinfo[CODESET] != (utf|UTF)(-|)8 ]] && _p9k_init_locale; then
+    if (( ! _p9k__codeset_is_utf8 )) && _p9k_init_locale; then
       if [[ -n $LC_ALL ]]; then
         _p9k__real_lc_all=$LC_ALL
         LC_ALL=$__p9k_locale

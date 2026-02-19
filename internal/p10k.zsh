@@ -5829,7 +5829,8 @@ _p9k_haskell_stack_version() {
       --no-terminal            \
       --color=never            \
       --lock-file=read-only    \
-      query compiler actual)" || v=
+      --no-run-setup           \
+      query compiler actual 2>/dev/null)" || v=
     _p9k_cache_stat_set "$v"
   fi
   _p9k__ret=$_p9k__cache_val[1]

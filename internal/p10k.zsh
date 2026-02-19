@@ -7035,7 +7035,20 @@ function _p9k_on_expand() {
 
   (( _p9k__expanded && ! $+__p9k_instant_prompt_active )) && return
 
-  eval "$__p9k_intro_locale"
+  # Use case statement instead of eval "$__p9k_intro_locale" to avoid
+  # "bad pattern" errors when extended_glob is off (issue #2887).
+  local _p9k__need_locale=0
+  case "${langinfo[CODESET]}" in
+    utf-8|UTF-8|utf8|UTF8) ;;
+    *) _p9k__need_locale=1;;
+  esac
+  if (( _p9k__need_locale )) && _p9k_init_locale; then
+    if [[ -n $LC_ALL ]]; then
+      local LC_ALL=$__p9k_locale
+    else
+      local LC_CTYPE=$__p9k_locale
+    fi
+  fi
 
   if (( ! _p9k__expanded )); then
     if _p9k_should_dump; then

@@ -40,6 +40,9 @@ function _p9k_init_locale() {
     typeset -g __p9k_locale=
     (( $+commands[locale] )) || return
     local -a loc
+    # Use emulate -L zsh with extended_glob to ensure patterns work
+    # even when called from contexts without extended_glob (issue #2887).
+    emulate -L zsh -o extended_glob
     loc=(${(@M)$(locale -a 2>/dev/null):#*.(utf|UTF)(-|)8}) || return
     (( $#loc )) || return
     typeset -g __p9k_locale=${loc[(r)(#i)C.UTF(-|)8]:-${loc[(r)(#i)en_US.UTF(-|)8]:-$loc[1]}}

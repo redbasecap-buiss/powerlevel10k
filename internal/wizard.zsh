@@ -1589,7 +1589,7 @@ function ask_transient_prompt() {
   case $choice in
     r) return 1;;
     y) transient_prompt=1; options+=transient_prompt=always;;
-    d) transient_prompt=1; options+=transient_prompt=same-dir;;
+    d) transient_prompt=2; options+=transient_prompt=same-dir;;
     n) transient_prompt=0;;
   esac
   return 0

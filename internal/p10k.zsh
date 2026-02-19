@@ -5476,6 +5476,23 @@ _p9k_prompt_wifi_async() {
         esac
       done
       [[ $state == running && $rssi == (0|-<->) && $noise == (0|-<->) ]] || return 0
+      # macOS 15+ redacts SSID from airport output (#2894). Fall back to
+      # networksetup to retrieve the actual network name.
+      if [[ $ssid == '<redacted>' || -z $ssid ]]; then
+        local _wifi_iface
+        _wifi_iface="$(command networksetup -listallhardwareports 2>/dev/null |
+          command awk '/Wi-Fi|AirPort/{getline; print $NF}')"
+        if [[ -n $_wifi_iface ]]; then
+          # Check if the interface is actually active before querying SSID
+          if ! command ipconfig getsummary "$_wifi_iface" 2>/dev/null |
+               command grep -Fxq '  Active : FALSE'; then
+            local _fallback_ssid
+            _fallback_ssid="$(command networksetup -listpreferredwirelessnetworks "$_wifi_iface" 2>/dev/null |
+              command sed -n '2s/^	//p')"
+            [[ -n $_fallback_ssid ]] && ssid=$_fallback_ssid
+          fi
+        fi
+      fi
     elif [[ -r /proc/net/wireless && -n $commands[iw] ]]; then
       # Content example (https://github.com/romkatv/powerlevel10k/pull/973#issuecomment-680251804):
       #

@@ -4284,8 +4284,12 @@ function _p9k_vcs_gitstatus() {
 
 prompt_vcs() {
   if (( _p9k_vcs_index && $+GITSTATUS_DAEMON_PID_POWERLEVEL9K )); then
-    _p9k__prompt+='${(e)_p9k__vcs}'
-    return
+    # Only take the fast path when git is the sole backend. If other backends
+    # (svn, hg) are configured, we must fall through to run vcs_info for them (#2889).
+    if (( $#_POWERLEVEL9K_VCS_BACKENDS == 1 )) && [[ $_POWERLEVEL9K_VCS_BACKENDS[1] == git ]]; then
+      _p9k__prompt+='${(e)_p9k__vcs}'
+      return
+    fi
   fi
 
   local -a backends=($_POWERLEVEL9K_VCS_BACKENDS)

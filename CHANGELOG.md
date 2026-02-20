@@ -8,6 +8,9 @@ All notable changes to this community fork of Powerlevel10k.
 - **swap**: Add FreeBSD/BSD support using `sysctl vm.swap_total`/`vm.swap_reserved` with `swapinfo` fallback
 - **ram (free)**: Replace fragile `/var/run/dmesg.boot` parsing with real-time `sysctl` on FreeBSD
 
+### Improved
+- **haskell_stack**: Parse GHC version directly from `stack.yaml` for `ghc-*` resolvers, avoiding slow `stack` invocation (#2890)
+
 ## [v1.24.1] - 2026-02-20
 
 ### Fixed

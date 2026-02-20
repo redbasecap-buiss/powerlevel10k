@@ -2774,7 +2774,7 @@ prompt_ram() {
 
 function _p9k_prompt_ram_init() {
   if [[ $_p9k_os == OSX && $+commands[vm_stat] == 0 ||
-        $_p9k_os == BSD && ! -r /var/run/dmesg.boot ||
+        $_p9k_os == BSD && $+commands[sysctl] == 0 ||
         $_p9k_os != (OSX|BSD) && ! -r /proc/meminfo ]]; then
     typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='${:-}'
     return
@@ -2807,8 +2807,13 @@ _p9k_prompt_ram_async() {
       (( free_bytes *= _p9k__ram_pagesize ))
     ;;
     BSD)
-      local stat && stat="$(grep -F 'avail memory' /var/run/dmesg.boot 2>/dev/null)" || return
-      free_bytes=${${(A)=stat}[4]}
+      (( $+commands[sysctl] )) || return
+      local -i page_size mem_free=0 mem_inactive=0 mem_cache=0
+      page_size=$(sysctl -n hw.pagesize 2>/dev/null) || page_size=4096
+      mem_free=$(sysctl -n vm.stats.vm.v_free_count 2>/dev/null) || return
+      mem_inactive=$(sysctl -n vm.stats.vm.v_inactive_count 2>/dev/null)
+      mem_cache=$(sysctl -n vm.stats.vm.v_cache_count 2>/dev/null)
+      (( free_bytes = (mem_free + mem_inactive + mem_cache) * page_size ))
     ;;
     *)
       [[ -r /proc/meminfo ]] || return
@@ -3639,7 +3644,7 @@ prompt_swap() {
 }
 
 function _p9k_prompt_swap_init() {
-  if [[ $_p9k_os == OSX && $+commands[sysctl] == 0 || $_p9k_os != OSX && ! -r /proc/meminfo ]]; then
+  if [[ $_p9k_os == (OSX|BSD) && $+commands[sysctl] == 0 || $_p9k_os != (OSX|BSD) && ! -r /proc/meminfo ]]; then
     typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='${:-}'
     return
   fi
@@ -3665,6 +3670,30 @@ _p9k_prompt_swap_async() {
       'T') (( used_bytes *= 1099511627776 ));;
       *) return 0;;
     esac
+  elif [[ "$_p9k_os" == "BSD" ]]; then
+    (( $+commands[sysctl] )) || return
+    local -i page_size swap_total=0 swap_used=0
+    page_size=$(sysctl -n hw.pagesize 2>/dev/null) || page_size=4096
+    # FreeBSD: vm.swap_total and vm.swap_reserved (in bytes)
+    if swap_total=$(sysctl -n vm.swap_total 2>/dev/null) && (( swap_total > 0 )); then
+      swap_used=$(sysctl -n vm.swap_reserved 2>/dev/null) || swap_used=0
+      (( used_bytes = swap_used ))
+    else
+      # Fallback: try swapinfo command
+      if (( $+commands[swapinfo] )); then
+        local line
+        local -i total=0 sw_used=0
+        while IFS= read -r line; do
+          [[ $line == /dev/* ]] || continue
+          local -a parts=(${(s: :)line})
+          (( total += ${parts[2]:-0} ))
+          (( sw_used += ${parts[3]:-0} ))
+        done < <(swapinfo -k 2>/dev/null)
+        (( used_bytes = sw_used * 1024 ))
+      else
+        return
+      fi
+    fi
   else
     local meminfo && meminfo="$(grep -F 'Swap' /proc/meminfo 2>/dev/null)" || return
     [[ $meminfo =~ 'SwapTotal:[[:space:]]+([0-9]+)' ]] || return

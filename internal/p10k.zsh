@@ -5994,16 +5994,34 @@ _p9k_prompt_asdf_init() {
 
 _p9k_haskell_stack_version() {
   if ! _p9k_cache_stat_get $0 $1 ${STACK_ROOT:-~/.stack}/{pantry/pantry.sqlite3,stack.sqlite3}; then
-    local v
-    v="$(STACK_YAML=$1 stack \
-      --silent                 \
-      --no-install-ghc         \
-      --skip-ghc-check         \
-      --no-terminal            \
-      --color=never            \
-      --lock-file=read-only    \
-      --no-run-setup           \
-      query compiler actual 2>/dev/null)" || v=
+    local v=
+    # First try to extract GHC version from the resolver in stack.yaml.
+    # This avoids invoking `stack` which is slow and has side effects (#2890).
+    if [[ -r $1 ]]; then
+      local resolver
+      resolver="$(command sed -n 's/^resolver:[[:space:]]*//p' $1 2>/dev/null)"
+      # Strip optional url: prefix and quotes
+      resolver="${resolver#url:}"
+      resolver="${resolver## }"
+      resolver="${resolver#\"}"
+      resolver="${resolver%\"}"
+      # LTS/nightly resolvers: extract ghc version from snapshot yaml or use stack as fallback
+      case $resolver in
+        ghc-*)  v="${resolver#ghc-}";;
+        *)
+          # Fallback to stack query but with --no-setup to prevent file creation
+          v="$(STACK_YAML=$1 stack \
+            --silent                 \
+            --no-install-ghc         \
+            --skip-ghc-check         \
+            --no-terminal            \
+            --color=never            \
+            --lock-file=read-only    \
+            --no-run-setup           \
+            query compiler actual 2>/dev/null)" || v=
+          ;;
+      esac
+    fi
     _p9k_cache_stat_set "$v"
   fi
   _p9k__ret=$_p9k__cache_val[1]

@@ -2217,7 +2217,7 @@ prompt_docker_context() {
 }
 
 _p9k_prompt_docker_context_init() {
-  typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='$commands[docker]'
+  typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='${commands[docker]:-${commands[podman]:-$commands[nerdctl]}}'
 }
 
 ################################################################
@@ -2855,12 +2855,28 @@ _p9k_prompt_cpu_usage_compute() {
 _p9k_prompt_cpu_usage_async() {
   local -i pct i
   case $_p9k_os in
-    OSX|BSD)
+    OSX)
       (( $+commands[top] )) || return
       local out && out="$(top -l 1 -n 0 2>/dev/null | grep -F 'CPU usage')" || return
       local idle=${${out##*idle}%%\%*}
       idle=${idle##* }
       (( pct = 100 - ${idle%.*} ))
+    ;;
+    BSD)
+      (( $+commands[sysctl] )) || return
+      # FreeBSD: kern.cp_time returns user nice sys intr idle
+      local -a cp_time
+      cp_time=(${(s: :)$(sysctl -n kern.cp_time 2>/dev/null)}) || return
+      (( $#cp_time >= 5 )) || return
+      local -i total=0 idle_diff total_diff
+      for i in $cp_time; do (( total += i )); done
+      if (( $+_p9k__cpu_prev_total )); then
+        (( total_diff = total - _p9k__cpu_prev_total ))
+        (( idle_diff = cp_time[5] - _p9k__cpu_prev_idle ))
+        (( total_diff > 0 )) && (( pct = 100 * (total_diff - idle_diff) / total_diff ))
+      fi
+      typeset -gi _p9k__cpu_prev_total=$total
+      typeset -gi _p9k__cpu_prev_idle=${cp_time[5]}
     ;;
     *)
       [[ -r /proc/stat ]] || return
@@ -2929,7 +2945,7 @@ _p9k_prompt_ram_usage_compute() {
 _p9k_prompt_ram_usage_async() {
   local -i pct
   case $_p9k_os in
-    OSX|BSD)
+    OSX)
       (( $+commands[vm_stat] )) || return
       local out && out="$(vm_stat 2>/dev/null)" || return
       local -i page_size=16384
@@ -2945,6 +2961,18 @@ _p9k_prompt_ram_usage_async() {
       local -i used=$(( (pages_active + pages_wired + pages_compressed) ))
       local -i total=$(( used + pages_free + pages_speculative ))
       (( total > 0 )) && (( pct = 100 * used / total ))
+    ;;
+    BSD)
+      (( $+commands[sysctl] )) || return
+      local -i mem_total=0 mem_free=0 mem_inactive=0 mem_cache=0
+      mem_total=$(sysctl -n hw.physmem 2>/dev/null) || return
+      mem_free=$(sysctl -n vm.stats.vm.v_free_count 2>/dev/null) || return
+      local -i page_size
+      page_size=$(sysctl -n hw.pagesize 2>/dev/null) || page_size=4096
+      mem_inactive=$(sysctl -n vm.stats.vm.v_inactive_count 2>/dev/null)
+      mem_cache=$(sysctl -n vm.stats.vm.v_cache_count 2>/dev/null)
+      local -i avail=$(( (mem_free + mem_inactive + mem_cache) * page_size ))
+      (( mem_total > 0 )) && (( pct = 100 * (mem_total - avail) / mem_total ))
     ;;
     *)
       [[ -r /proc/meminfo ]] || return

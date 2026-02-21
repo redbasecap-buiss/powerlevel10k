@@ -2918,6 +2918,7 @@ _p9k_prompt_cpu_usage_async() {
     _p9k__cpu_usage_low    \
     _p9k__cpu_usage_medium \
     _p9k__cpu_usage_high
+  echo -E - 'reset=1'
 }
 
 _p9k_prompt_cpu_usage_sync() {
@@ -3007,6 +3008,7 @@ _p9k_prompt_ram_usage_async() {
     _p9k__ram_usage_low    \
     _p9k__ram_usage_medium \
     _p9k__ram_usage_high
+  echo -E - 'reset=1'
 }
 
 _p9k_prompt_ram_usage_sync() {
@@ -5132,20 +5134,38 @@ _p9k_prompt_google_app_cred_init() {
 #   POWERLEVEL9K_NORDVPN_CONNECTING_CONTENT_EXPANSION='${P9K_NORDVPN_COUNTRY_CODE}'
 #   POWERLEVEL9K_NORDVPN_CONNECTING_BACKGROUND=cyan
 function prompt_nordvpn() {
-  # Rewritten to use `nordvpn status` CLI instead of raw socket protocol.
+  # Rewritten to use `nordvpn status` CLI via async worker instead of raw socket protocol.
   # The previous socket-based approach broke with newer NordVPN versions,
   # causing infinite loops that froze the shell. See issue #2860.
-  unset P9K_NORDVPN_STATUS P9K_NORDVPN_TECHNOLOGY P9K_NORDVPN_PROTOCOL \
-        P9K_NORDVPN_IP_ADDRESS P9K_NORDVPN_SERVER P9K_NORDVPN_COUNTRY \
-        P9K_NORDVPN_CITY P9K_NORDVPN_COUNTRY_CODE
+  # Now runs asynchronously to avoid blocking the prompt.
+  local -i len=$#_p9k__prompt _p9k__has_upglob
+  _p9k_prompt_segment $0_CONNECTED    blue   white NORDVPN_ICON 1 '$_p9k__nordvpn_connected'    '$_p9k__nordvpn_country_code'
+  _p9k_prompt_segment $0_DISCONNECTED yellow white NORDVPN_ICON 1 '$_p9k__nordvpn_disconnected'  ''
+  _p9k_prompt_segment $0_CONNECTING   yellow white NORDVPN_ICON 1 '$_p9k__nordvpn_connecting'    ''
+  (( _p9k__has_upglob )) || typeset -g "_p9k__segment_val_${_p9k__prompt_side}[_p9k__segment_index]"=$_p9k__prompt[len+1,-1]
+}
 
+_p9k_prompt_nordvpn_init() {
+  typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='$commands[nordvpn]'
+  typeset -g _p9k__nordvpn_connected=
+  typeset -g _p9k__nordvpn_disconnected=
+  typeset -g _p9k__nordvpn_connecting=
+  typeset -g _p9k__nordvpn_country_code=
+  _p9k__async_segments_compute+='_p9k_worker_invoke nordvpn _p9k_prompt_nordvpn_compute'
+}
+
+_p9k_prompt_nordvpn_compute() {
+  _p9k_worker_async _p9k_prompt_nordvpn_async _p9k_prompt_nordvpn_sync
+}
+
+_p9k_prompt_nordvpn_async() {
   [[ -e /run/nordvpn/nordvpnd.sock ]] || return
 
   local nordvpn_output
   nordvpn_output=$(command nordvpn status 2>/dev/null) || return
   [[ -n "$nordvpn_output" ]] || return
 
-  local line key value
+  local line key value status= server= country_code=
   while IFS='' read -r line; do
     # Strip ANSI escape sequences and control characters
     line=${line//$'\e['[0-9;]#[a-zA-Z]/}
@@ -5154,40 +5174,46 @@ function prompt_nordvpn() {
       key="${match[1]}"
       value="${match[2]}"
       case "$key" in
-        Status)              typeset -g P9K_NORDVPN_STATUS="$value";;
-        Hostname)            typeset -g P9K_NORDVPN_SERVER="$value";;
-        IP)                  typeset -g P9K_NORDVPN_IP_ADDRESS="$value";;
-        "Current technology") typeset -g P9K_NORDVPN_TECHNOLOGY="${${(U)value}//İ/I}";;
-        "Current protocol")  typeset -g P9K_NORDVPN_PROTOCOL="${${(U)value}//İ/I}";;
-        Country)             typeset -g P9K_NORDVPN_COUNTRY="$value";;
-        City)                typeset -g P9K_NORDVPN_CITY="$value";;
+        Status)   status="$value";;
+        Hostname) server="$value";;
       esac
     fi
   done <<< "$nordvpn_output"
 
-  [[ -n $P9K_NORDVPN_STATUS ]] || return
+  [[ -n $status ]] || return
 
-  if [[ $P9K_NORDVPN_SERVER == (#b)([[:alpha:]]##)[[:digit:]]##.nordvpn.com ]]; then
-    typeset -g P9K_NORDVPN_COUNTRY_CODE=${${(U)match[1]}//İ/I}
+  if [[ $server == (#b)([[:alpha:]]##)[[:digit:]]##.nordvpn.com ]]; then
+    country_code=${${(U)match[1]}//İ/I}
   fi
 
-  case $P9K_NORDVPN_STATUS in
-    Connected)
-      _p9k_prompt_segment $0_CONNECTED blue   white NORDVPN_ICON 0 '' "$P9K_NORDVPN_COUNTRY_CODE"
-    ;;
-    Disconnected|Connecting|Disconnecting)
-      local state=${${(U)P9K_NORDVPN_STATUS}//İ/I}
-      _p9k_get_icon $0_$state FAIL_ICON
-      _p9k_prompt_segment $0_$state    yellow white NORDVPN_ICON 0 '' "$_p9k__ret"
-    ;;
-    *)
-      return
-    ;;
+  local connected= disconnected= connecting=
+  case $status in
+    Connected)                 connected=1;;
+    Disconnected)              disconnected=1;;
+    Connecting|Disconnecting)  connecting=1;;
+    *)                         return;;
   esac
+
+  [[ $connected == $_p9k__nordvpn_connected &&
+     $disconnected == $_p9k__nordvpn_disconnected &&
+     $connecting == $_p9k__nordvpn_connecting &&
+     $country_code == $_p9k__nordvpn_country_code ]] && return
+
+  _p9k__nordvpn_connected=$connected
+  _p9k__nordvpn_disconnected=$disconnected
+  _p9k__nordvpn_connecting=$connecting
+  _p9k__nordvpn_country_code=$country_code
+  _p9k_print_params              \
+    _p9k__nordvpn_connected      \
+    _p9k__nordvpn_disconnected   \
+    _p9k__nordvpn_connecting     \
+    _p9k__nordvpn_country_code
+  echo -E - 'reset=1'
 }
 
-_p9k_prompt_nordvpn_init() {
-  typeset -g "_p9k__segment_cond_${_p9k__prompt_side}[_p9k__segment_index]"='$commands[nordvpn]'
+_p9k_prompt_nordvpn_sync() {
+  eval $REPLY
+  _p9k_worker_reply $REPLY
 }
 
 function prompt_ranger() {

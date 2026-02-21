@@ -6,10 +6,12 @@ All notable changes to this community fork of Powerlevel10k.
 
 ### Fixed
 - **nordvpn**: Rewrite segment to use `nordvpn status` CLI instead of raw socket protocol, fixing shell freeze with newer NordVPN versions (#2860)
+- **cpu_usage, ram_usage**: Add missing `reset=1` to async output, ensuring prompt redraws when usage state changes (HIGH/MEDIUM/LOW transitions)
 - **swap**: Add FreeBSD/BSD support using `sysctl vm.swap_total`/`vm.swap_reserved` with `swapinfo` fallback
 - **ram (free)**: Replace fragile `/var/run/dmesg.boot` parsing with real-time `sysctl` on FreeBSD
 
 ### Improved
+- **nordvpn**: Move CLI invocation to async worker to avoid blocking prompt rendering
 - **haskell_stack**: Parse GHC version directly from `stack.yaml` for `ghc-*` resolvers, avoiding slow `stack` invocation (#2890)
 
 ## [v1.24.1] - 2026-02-20

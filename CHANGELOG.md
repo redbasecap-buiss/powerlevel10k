@@ -5,6 +5,7 @@ All notable changes to this community fork of Powerlevel10k.
 ## [Unreleased]
 
 ### Fixed
+- **nordvpn**: Rewrite segment to use `nordvpn status` CLI instead of raw socket protocol, fixing shell freeze with newer NordVPN versions (#2860)
 - **swap**: Add FreeBSD/BSD support using `sysctl vm.swap_total`/`vm.swap_reserved` with `swapinfo` fallback
 - **ram (free)**: Replace fragile `/var/run/dmesg.boot` parsing with real-time `sysctl` on FreeBSD
 

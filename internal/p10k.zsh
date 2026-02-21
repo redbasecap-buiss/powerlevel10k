@@ -3820,7 +3820,11 @@ prompt_date() {
     if [[ $+__p9k_instant_prompt_active == 1 && $__p9k_instant_prompt_date_format == $_POWERLEVEL9K_DATE_FORMAT ]]; then
       _p9k__date=${__p9k_instant_prompt_date//\%/%%}
     else
+      # Force C locale for date formatting to avoid localized day/month names (consistent with #2871).
+      local _p9k__saved_lc_time=$LC_TIME
+      LC_TIME=C
       _p9k__date=${${(%)_POWERLEVEL9K_DATE_FORMAT}//\%/%%}
+      LC_TIME=$_p9k__saved_lc_time
     fi
   fi
   _p9k_prompt_segment "$0" "$_p9k_color2" "$_p9k_color1" "DATE_ICON" 0 '' "$_p9k__date"

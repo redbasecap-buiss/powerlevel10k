@@ -4,6 +4,8 @@ All notable changes to this community fork of Powerlevel10k.
 
 ## [Unreleased]
 
+## [v1.24.2] - 2026-02-21
+
 ### Fixed
 - **nordvpn**: Rewrite segment to use `nordvpn status` CLI instead of raw socket protocol, fixing shell freeze with newer NordVPN versions (#2860)
 - **cpu_usage, ram_usage**: Add missing `reset=1` to async output, ensuring prompt redraws when usage state changes (HIGH/MEDIUM/LOW transitions)

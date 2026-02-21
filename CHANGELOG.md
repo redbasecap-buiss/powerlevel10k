@@ -4,6 +4,9 @@ All notable changes to this community fork of Powerlevel10k.
 
 ## [Unreleased]
 
+### Fixed
+- **wifi**: Add secondary SSID fallback using `ipconfig getsummary` + `listpreferredwirelessnetworks` for macOS 15+ when `getairportnetwork` also returns redacted (#2894)
+
 ## [v1.24.3] - 2026-02-21
 
 ### Fixed

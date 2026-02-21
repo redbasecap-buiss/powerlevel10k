@@ -4,9 +4,11 @@ All notable changes to this community fork of Powerlevel10k.
 
 ## [Unreleased]
 
+## [v1.24.4] - 2026-02-22
+
 ### Fixed
 - **wifi**: Add secondary SSID fallback using `ipconfig getsummary` + `listpreferredwirelessnetworks` for macOS 15+ when `getairportnetwork` also returns redacted (#2894)
-- **nordvpn**: Add 5-second timeout to `nordvpn status` CLI call to prevent worker hangs (#2860)
+- **nordvpn**: Add 5-second timeout to `nordvpn status` CLI call to prevent async worker hangs (#2860)
 - **haskell_stack**: Add 10-second timeout to `stack query` fallback to prevent long prompt delays (#2890)
 
 ## [v1.24.3] - 2026-02-21

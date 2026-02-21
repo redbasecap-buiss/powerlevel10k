@@ -3758,7 +3758,12 @@ _p9k_build_test_stats() {
 # System time
 prompt_time() {
   if (( _POWERLEVEL9K_EXPERIMENTAL_TIME_REALTIME )); then
-    _p9k_prompt_segment "$0" "$_p9k_color2" "$_p9k_color1" "TIME_ICON" 0 '' "$_POWERLEVEL9K_TIME_FORMAT"
+    # Force C locale for time formatting to avoid localized AM/PM (issue #2871).
+    local _p9k__saved_lc_time=$LC_TIME
+    LC_TIME=C
+    local _p9k__rt_time=${${(%)_POWERLEVEL9K_TIME_FORMAT}//\%/%%}
+    LC_TIME=$_p9k__saved_lc_time
+    _p9k_prompt_segment "$0" "$_p9k_color2" "$_p9k_color1" "TIME_ICON" 0 '' "$_p9k__rt_time"
   else
     if [[ $_p9k__refresh_reason == precmd ]]; then
       if [[ $+__p9k_instant_prompt_active == 1 && $__p9k_instant_prompt_time_format == $_POWERLEVEL9K_TIME_FORMAT ]]; then

@@ -5646,6 +5646,23 @@ _p9k_prompt_wifi_async() {
             local _fallback_ssid=${_fallback_out#Current Wi-Fi Network: }
             [[ -n $_fallback_ssid ]] && ssid=$_fallback_ssid
           fi
+          # Secondary fallback: if getairportnetwork also returns redacted,
+          # try ipconfig getsummary + listpreferredwirelessnetworks (#2894)
+          if [[ $ssid == '<redacted>' || -z $ssid ]]; then
+            local _ipconfig_out
+            _ipconfig_out="$(command ipconfig getsummary "$_wifi_iface" 2>/dev/null)"
+            if [[ $_ipconfig_out != *'Active : FALSE'* ]]; then
+              local _pref_out
+              _pref_out="$(command networksetup -listpreferredwirelessnetworks "$_wifi_iface" 2>/dev/null)"
+              if [[ -n $_pref_out ]]; then
+                # First preferred network is typically the connected one
+                local _pref_ssid
+                _pref_ssid="${${(f)_pref_out}[2]}"
+                _pref_ssid="${_pref_ssid##[[:space:]]#}"
+                [[ -n $_pref_ssid ]] && ssid=$_pref_ssid
+              fi
+            fi
+          fi
         fi
       fi
     elif [[ -r /proc/net/wireless && -n $commands[iw] ]]; then

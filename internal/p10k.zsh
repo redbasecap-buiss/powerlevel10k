@@ -3788,6 +3788,9 @@ prompt_time() {
 }
 
 instant_prompt_time() {
+  # Note: instant prompt renders via stash expansion at display time, so we cannot
+  # easily force LC_TIME=C here. The instant prompt may show localized AM/PM briefly
+  # until the full prompt replaces it. See issue #2871.
   _p9k_escape $_POWERLEVEL9K_TIME_FORMAT
   local stash='${${__p9k_instant_prompt_time::=${(%)${__p9k_instant_prompt_time_format::='$_p9k__ret'}}}+}'
   _p9k_escape $_POWERLEVEL9K_TIME_FORMAT
@@ -5171,7 +5174,12 @@ _p9k_prompt_nordvpn_async() {
   [[ -e /run/nordvpn/nordvpnd.sock ]] || return
 
   local nordvpn_output
-  nordvpn_output=$(command nordvpn status 2>/dev/null) || return
+  # Use timeout to prevent hanging if nordvpn CLI blocks (e.g., socket issues).
+  if (( $+commands[timeout] )); then
+    nordvpn_output=$(command timeout 5 nordvpn status 2>/dev/null) || return
+  else
+    nordvpn_output=$(command nordvpn status 2>/dev/null) || return
+  fi
   [[ -n "$nordvpn_output" ]] || return
 
   local line key value status= server= country_code=
@@ -6025,16 +6033,22 @@ _p9k_haskell_stack_version() {
       case $resolver in
         ghc-*)  v="${resolver#ghc-}";;
         *)
-          # Fallback to stack query but with --no-setup to prevent file creation
-          v="$(STACK_YAML=$1 stack \
-            --silent                 \
-            --no-install-ghc         \
-            --skip-ghc-check         \
-            --no-terminal            \
-            --color=never            \
-            --lock-file=read-only    \
-            --no-run-setup           \
-            query compiler actual 2>/dev/null)" || v=
+          # Fallback to stack query but with --no-setup to prevent file creation.
+          # Use timeout to prevent long hangs (#2890).
+          local -a stack_cmd=(stack
+            --silent
+            --no-install-ghc
+            --skip-ghc-check
+            --no-terminal
+            --color=never
+            --lock-file=read-only
+            --no-run-setup
+            query compiler actual)
+          if (( $+commands[timeout] )); then
+            v="$(STACK_YAML=$1 command timeout 10 $stack_cmd 2>/dev/null)" || v=
+          else
+            v="$(STACK_YAML=$1 command $stack_cmd 2>/dev/null)" || v=
+          fi
           ;;
       esac
     fi

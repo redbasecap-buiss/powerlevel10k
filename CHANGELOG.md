@@ -2,6 +2,15 @@
 
 All notable changes to this community fork of Powerlevel10k.
 
+## [v1.24.6] - 2026-02-22
+
+### Fixed
+- **aws_eb_env**: Add 10-second timeout to `eb list` to prevent prompt hangs on network issues
+- **taskwarrior**: Add 5-second timeout to all `task` CLI calls (`show`, `count`, `list`) to prevent prompt hangs on lock contention or data issues
+
+### Added
+- **tests**: Add timeout validation tests for eb list and taskwarrior commands
+
 ## [v1.24.5] - 2026-02-22
 
 ### Added

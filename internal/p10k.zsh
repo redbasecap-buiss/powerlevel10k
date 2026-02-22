@@ -1222,7 +1222,12 @@ prompt_aws_eb_env() {
 
   if ! _p9k_cache_stat_get $0 $dir/.elasticbeanstalk/config.yml; then
     local env
-    env="$(command eb list 2>/dev/null)" || env=
+    # Use timeout to prevent hanging if eb CLI blocks (e.g., network issues).
+    if (( $+commands[timeout] )); then
+      env="$(command timeout 10 eb list 2>/dev/null)" || env=
+    else
+      env="$(command eb list 2>/dev/null)" || env=
+    fi
     env="${${(@M)${(@f)env}:#\* *}#\* }"
     _p9k_cache_stat_set "$env"
   fi
@@ -5484,7 +5489,12 @@ function _p9k_taskwarrior_init_meta() {
   local last_sig=$_p9k_taskwarrior_meta_sig
   {
     local cfg
-    cfg="$(command task show data.location rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || return
+    # Use timeout to prevent hanging if taskwarrior blocks (e.g., lock contention).
+    if (( $+commands[timeout] )); then
+      cfg="$(command timeout 5 task show data.location rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || return
+    else
+      cfg="$(command task show data.location rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || return
+    fi
     local lines=(${(@M)${(f)cfg}:#data.location[[:space:]]##[^[:space:]]*})
     (( $#lines == 1 )) || return
     local dir=${lines[1]##data.location[[:space:]]#}
@@ -5543,7 +5553,11 @@ function _p9k_taskwarrior_init_data() {
 
   local name val
   for name in PENDING OVERDUE; do
-    val="$(command task +$name count rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || continue
+    if (( $+commands[timeout] )); then
+      val="$(command timeout 5 task +$name count rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || continue
+    else
+      val="$(command task +$name count rc.color=0 rc._forcecolor=0 </dev/null 2>/dev/null)" || continue
+    fi
     [[ $val == <1-> ]] || continue
     _p9k_taskwarrior_counters[$name]=$val
   done
@@ -5552,8 +5566,13 @@ function _p9k_taskwarrior_init_data() {
 
   if (( _p9k_taskwarrior_counters[PENDING] > _p9k_taskwarrior_counters[OVERDUE] )); then
     local -a ts
-    ts=($(command task +PENDING -OVERDUE list rc.verbose=nothing rc.color=0 rc._forcecolor=0 \
-      rc.report.list.labels= rc.report.list.columns=due.epoch </dev/null 2>/dev/null)) || ts=()
+    if (( $+commands[timeout] )); then
+      ts=($(command timeout 5 task +PENDING -OVERDUE list rc.verbose=nothing rc.color=0 rc._forcecolor=0 \
+        rc.report.list.labels= rc.report.list.columns=due.epoch </dev/null 2>/dev/null)) || ts=()
+    else
+      ts=($(command task +PENDING -OVERDUE list rc.verbose=nothing rc.color=0 rc._forcecolor=0 \
+        rc.report.list.labels= rc.report.list.columns=due.epoch </dev/null 2>/dev/null)) || ts=()
+    fi
     # The second condition is a workaround for a bug in taskwarrior v3.0.1.
     # https://github.com/romkatv/powerlevel10k/issues/2648.
     if (( $#ts && ! ${#${(@)ts:#(|-)<->(|.<->)}} )); then

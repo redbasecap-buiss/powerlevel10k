@@ -2,7 +2,7 @@
 
 All notable changes to this community fork of Powerlevel10k.
 
-## [Unreleased]
+## [v1.24.5] - 2026-02-22
 
 ### Added
 - **transient_prompt**: Add `POWERLEVEL9K_TRANSIENT_PROMPT_SHOW_EXECUTION_TIME` option to display command execution time in transient prompt (#2913)

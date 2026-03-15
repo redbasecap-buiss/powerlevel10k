@@ -1,14 +1,20 @@
-# Powerlevel10k (Community Fork)
+<div align="center">
 
-> **Community-maintained fork of [Powerlevel10k](https://github.com/romkatv/powerlevel10k)**
-> by [Roman Perepelitsa (romkatv)](https://github.com/romkatv).
->
-> The original project has been archived with limited support. This fork continues
-> development with bug fixes and community contributions. All credit for the original
-> work goes to romkatv — thank you for creating one of the best Zsh themes ever made. ❤️
+# ⚡ Powerlevel10k
 
-Powerlevel10k is a theme for Zsh. It emphasizes [speed](#uncompromising-performance),
-[flexibility](#extremely-customizable) and [out-of-the-box experience](#configuration-wizard).
+**The fastest & most customizable Zsh theme — community maintained**
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Zsh](https://img.shields.io/badge/zsh-5.1%2B-green.svg)](https://www.zsh.org)
+[![Oh My Zsh](https://img.shields.io/badge/Oh%20My%20Zsh-compatible-orange.svg)](https://ohmyz.sh)
+
+*Community-maintained fork of [romkatv/powerlevel10k](https://github.com/romkatv/powerlevel10k) — keeping it alive with bug fixes & improvements. All original credit goes to [Roman Perepelitsa](https://github.com/romkatv) ❤️*
+
+</div>
+
+---
+
+Powerlevel10k is a Zsh theme that puts **speed**, **flexibility** and **out-of-the-box experience** first. It starts your shell instantly, looks stunning, and works exactly the way you want it to.
 
 ![Powerlevel10k](
 https://raw.githubusercontent.com/quantumnic/powerlevel10k-media/master/prompt-styles-high-contrast.png)
